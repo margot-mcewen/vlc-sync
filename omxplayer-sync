@@ -195,8 +195,7 @@ class OMXPlayerSync:
             self.omxplayer_options.append("--loop")
 
         if self.options.aspect in ("fill", "stretch", "letterbox"):
-            self.omxplayer_options.append(
-                "--aspect-mode %s" % self.options.aspect)
+            self.omxplayer_options.append("--aspect-mode %s" % self.options.aspect)
 
         if not filter(lambda x: os.path.isfile(x), self.playlist):
             print("ERROR: none of the supplied filenames are found")
@@ -246,8 +245,7 @@ class OMXPlayerSync:
         self.process = Popen(
             [VLC]
             + list(
-                itertools.chain(
-                    *map(lambda x: x.split(" "), self.omxplayer_options))
+                itertools.chain(*map(lambda x: x.split(" "), self.omxplayer_options))
             )
             + [self.filename],
             preexec_fn=os.setsid,
@@ -283,11 +281,9 @@ class OMXPlayerSync:
                 break
 
             if self.options.verbose:
-                current_frame_local = math.modf(
-                    self.position_local)[0] * 100 / 4
+                current_frame_local = math.modf(self.position_local)[0] * 100 / 4
                 if self.options.slave:
-                    current_frame_master = math.modf(
-                        self.position_master)[0] * 100 / 4
+                    current_frame_master = math.modf(self.position_master)[0] * 100 / 4
 
             if self.options.master:
                 self.send_position_local()
@@ -346,8 +342,7 @@ class OMXPlayerSync:
                     and self.position_master > SYNC_GRACE_TIME
                 ):
                     if self.options.verbose:
-                        print("jump to %.2f" %
-                              (self.position_master + SYNC_JUMP_AHEAD))
+                        print("jump to %.2f" % (self.position_master + SYNC_JUMP_AHEAD))
                         print("enter pause...")
                     if not self.controller.playPause():
                         break
@@ -457,7 +452,7 @@ class OMXPlayerSync:
         quotient, remainder = divmod(len(lst), 2)
         if remainder:
             return sorted(lst)[quotient]
-        return float(sum(sorted(lst)[quotient - 1: quotient + 1]) / 2.0)
+        return float(sum(sorted(lst)[quotient - 1 : quotient + 1]) / 2.0)
 
 
 if __name__ == "__main__":
