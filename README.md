@@ -1,3 +1,7 @@
+> [!WARNING]
+> This is still very much a work in progress, it seems to work but I've not done much thorough testing.
+> Any advice below, particularly about how video should be encoded may not apply.
+
 OMXPlayer-Sync
 ==============
 
