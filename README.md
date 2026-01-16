@@ -24,7 +24,7 @@ Options:
 
 ### leader
 
-| ip           | netmask       |
+| ip address   | netmask       |
 | ------------ | ------------- |
 | 192.168.1.10 | 255.255.255.0 |
 
@@ -34,7 +34,7 @@ vlc-sync -lu video.mp4
 
 ### follwer
 
-| ip           | netmask       |
+| ip address   | netmask       |
 | ------------ | ------------- |
 | 192.168.1.11 | 255.255.255.0 |
 
