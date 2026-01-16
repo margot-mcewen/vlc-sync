@@ -39,7 +39,7 @@ except ImportError:
 
     DEVNULL = open(os.devnull, "wb")
 
-SYNC_TOLERANCE = 0.04
+SYNC_TOLERANCE = 0.03
 SYNC_GRACE_TIME = 5
 SYNC_JUMP_AHEAD = 3
 
@@ -160,16 +160,16 @@ class OMXPlayerSync:
         self.position_local = 0.0
         self.position_local_oldage = 0.0
         self.position_local_oldage_count = 0
-        self.position_master = 0.0
-        self.filename_master = ""
+        self.position_leader = 0.0
+        self.filename_leader = ""
         self.process = None
 
         signal.signal(signal.SIGINT, self.kill_omxplayer_and_exit)
 
     def run(self):
         p = PassThroughOptionParser()
-        p.add_option("--master", "-m", action="store_true")
-        p.add_option("--slave", "-l", action="store_true")
+        p.add_option("--leader", "-l", action="store_true")
+        p.add_option("--follwer", "-f", action="store_true")
         p.add_option("--destination", "-x", default="255.255.255.255")
         p.add_option("--loop", "-u", action="store_true")
         p.add_option("--verbose", "-v", action="store_true")
@@ -209,12 +209,12 @@ class OMXPlayerSync:
         if not self.options.verbose:
             self.omxplayer_options.append("--no-osd")
 
-        if self.options.master:
+        if self.options.leader:
             self.socket_enable_broadcast()
             self.socket_connect(self.options.destination)
 
-        if self.options.slave:
-            self.read_position_master()
+        if self.options.follwer:
+            self.read_position_leader()
             self.set_playlist_index()
 
         while True:
@@ -236,10 +236,10 @@ class OMXPlayerSync:
 
         if self.options.verbose:
             last_frame_local, current_frame_local = 0, 0
-            if self.options.slave:
-                last_frame_master, current_frame_master = 0, 0
+            if self.options.follwer:
+                last_frame_leader, current_frame_leader = 0, 0
 
-        if self.options.master:
+        if self.options.leader:
             self.send_position_local()
 
         self.process = Popen(
@@ -262,14 +262,14 @@ class OMXPlayerSync:
             )
             self.kill_omxplayer_and_exit()
 
-        if self.options.slave:
+        if self.options.follwer:
             wait_for_sync = False
             wait_after_sync = False
             deviations = collections.deque(maxlen=10)
 
         while True:
-            if self.options.slave:
-                self.read_position_master()
+            if self.options.follwer:
+                self.read_position_leader()
                 if wait_for_sync:
                     sync_timer = time()
 
@@ -282,10 +282,10 @@ class OMXPlayerSync:
 
             if self.options.verbose:
                 current_frame_local = math.modf(self.position_local)[0] * 100 / 4
-                if self.options.slave:
-                    current_frame_master = math.modf(self.position_master)[0] * 100 / 4
+                if self.options.follwer:
+                    current_frame_leader = math.modf(self.position_leader)[0] * 100 / 4
 
-            if self.options.master:
+            if self.options.leader:
                 self.send_position_local()
                 if self.options.verbose:
                     sys.stdout.write(
@@ -293,23 +293,23 @@ class OMXPlayerSync:
                         % (self.position_local, current_frame_local)
                     )
 
-            if self.options.slave:
-                if self.filename != self.filename_master:
+            if self.options.follwer:
+                if self.filename != self.filename_leader:
                     self.set_playlist_index()
                     break
 
-                deviation = self.position_master - self.position_local
+                deviation = self.position_leader - self.position_local
                 deviations.append(deviation)
                 median_deviation = self.median(list(deviations))
 
                 if self.options.verbose:
                     sys.stdout.write(
-                        "local: %.2f %.0f master: %.2f %.0f deviation: %.2f median_deviation: %.2f filename: %s\n"
+                        "local: %.2f %.0f leader: %.2f %.0f deviation: %.2f median_deviation: %.2f filename: %s\n"
                         % (
                             self.position_local,
                             current_frame_local,
-                            self.position_master,
-                            current_frame_master,
+                            self.position_leader,
+                            current_frame_leader,
                             deviation,
                             median_deviation,
                             self.filename,
@@ -339,22 +339,22 @@ class OMXPlayerSync:
                 if (
                     abs(median_deviation) > SYNC_TOLERANCE
                     and self.position_local > SYNC_GRACE_TIME
-                    and self.position_master > SYNC_GRACE_TIME
+                    and self.position_leader > SYNC_GRACE_TIME
                 ):
                     if self.options.verbose:
-                        print("jump to %.2f" % (self.position_master + SYNC_JUMP_AHEAD))
+                        print("jump to %.2f" % (self.position_leader + SYNC_JUMP_AHEAD))
                         print("enter pause...")
                     if not self.controller.playPause():
                         break
                     if not self.controller.setPosition(
-                        self.position_master + SYNC_JUMP_AHEAD
+                        self.position_leader + SYNC_JUMP_AHEAD
                     ):
                         break
 
                     wait_for_sync = True
                     wait_after_sync = time()
 
-            if self.options.master:
+            if self.options.leader:
                 sleep(1)
 
         self.kill_omxplayer()
@@ -369,17 +369,17 @@ class OMXPlayerSync:
         return True
 
     def set_playlist_index(self):
-        if self.filename_master == "":
-            print("WARNING: unable to get current filename from master")
+        if self.filename_leader == "":
+            print("WARNING: unable to get current filename from leader")
             sleep(5)
             return
 
         try:
-            self.playlist_index = self.playlist.index(self.filename_master)
+            self.playlist_index = self.playlist.index(self.filename_leader)
         except:
             print(
-                "WARNING: current master file '%s' is unavailable"
-                % self.filename_master
+                "WARNING: current leader file '%s' is unavailable"
+                % self.filename_leader
             )
 
     def increment_playlist_index(self):
@@ -419,7 +419,7 @@ class OMXPlayerSync:
         sys.exit(0)
 
     #
-    # master specific
+    # leader specific
     #
     def socket_enable_broadcast(self):
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
@@ -440,13 +440,13 @@ class OMXPlayerSync:
             pass
 
     #
-    # slave specific
+    # follwer specific
     #
-    def read_position_master(self):
+    def read_position_leader(self):
         data = self.sock.recvfrom(1024)[0].decode("utf-8").split("%", 1)
-        self.position_master = float(data[0])
-        print(self.position_master)
-        self.filename_master = data[1]
+        self.position_leader = float(data[0])
+        print(self.position_leader)
+        self.filename_leader = data[1]
 
     def median(self, lst):
         quotient, remainder = divmod(len(lst), 2)
