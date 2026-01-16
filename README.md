@@ -1,27 +1,20 @@
-> [!WARNING]
-> This is still very much a work in progress, it seems to work but I've not done much thorough testing.
-> Any advice below, particularly about how video should be encoded may not apply.
+# VLC-Sync
 
-OMXPlayer-Sync
-==============
+VLC-Sync facilitates synchronization of multiple VLC
+instances over the network in a leader/follwer fashion.
 
-OMXPlayer-Sync facilitates synchronization of multiple OMXPlayer
-instances over the network in a master/slave fashion.
+This is a port of [OMXPlayer-Sync](https://github.com/turingmachine/omxplayer-sync)
 
-https://vimeo.com/137133716
-
-
-Usage
------
+## Usage
 
 ```
 $ ./omxplayer-sync -h
-Usage: omxplayer-sync [options] filename
+Usage: vlc-sync [options] filename
 
 Options:
   -h, --help            show this help message and exit
-  -m, --master          
-  -l, --slave           
+  -l, --leader          
+  -f, --follwer           
   -x DESTINATION, --destination=DESTINATION
   -u, --loop            
   -v, --verbose         
@@ -29,62 +22,73 @@ Options:
   -a ASPECT, --aspect=ASPECT  Aspect Mode - fill, letterbox, stretch
 ```
 
-**Master**
+### leader
+
+| ip           | netmask       |
+| ------------ | ------------- |
+| 192.168.1.10 | 255.255.255.0 |
 
 ```
-omxplayer-sync -m movie1.mp4
+vlc-sync -lu video.mp4
 ```
 
-**Slave**
+### follwer
+
+| ip           | netmask       |
+| ------------ | ------------- |
+| 192.168.1.11 | 255.255.255.0 |
 
 ```
-omxplayer-sync -l movie1.mp4
+vlc-sync -fu 192.168.1.255 video.mp4
 ```
 
 
-Requirements
-------------
-A recent version of Python3 or Python2.
+## Requirements
+
+A recent version of Python3
 A recent version of the [python bindings for D-Bus](http://www.freedesktop.org/wiki/Software/DBusBindings).  
-A recent build of omxplayer for [Jesse](http://steinerdatenbank.de/software/omxplayer_0.3.7~git20180910~7f3faf6~jessie_armhf.deb) or [Stretch](http://steinerdatenbank.de/software/omxplayer_20180910~7f3faf6~stretch_armhf.deb).
+A recent build of vlc for Trixie.
 
+## Installation on Raspbian
 
-Installation on Raspbian
-------------------------
-Perform on both master and slave.
+> [!WARNING]
+> These instructions haven't been updated yet
+
+Perform on both leader and follwer.
 ```
 sudo su
 apt-get remove omxplayer
 rm -rf /usr/bin/omxplayer /usr/bin/omxplayer.bin /usr/lib/omxplayer
 apt-get install libpcre3 fonts-freefont-ttf fbset libssh-4 python3-dbus
-wget https://github.com/magdesign/PocketVJ-CP-v3/raw/master/sync/omxplayer_0.3.7-git20170130-62fb580_armhf.deb
+wget https://github.com/magdesign/PocketVJ-CP-v3/raw/leader/sync/omxplayer_0.3.7-git20170130-62fb580_armhf.deb
 dpkg -i omxplayer_0.3.7~git20170130~62fb580_armhf.deb
-wget -O /usr/bin/omxplayer-sync https://github.com/turingmachine/omxplayer-sync/raw/master/omxplayer-sync
+wget -O /usr/bin/omxplayer-sync https://github.com/turingmachine/omxplayer-sync/raw/leader/omxplayer-sync
 chmod 0755 /usr/bin/omxplayer-sync
-wget https://github.com/turingmachine/omxplayer-sync/raw/master/synctest.mp4
+wget https://github.com/turingmachine/omxplayer-sync/raw/leader/synctest.mp4
 ```
 
-Start on Master (-u loop, -v verbose)
+Start on leader (-u loop, -v verbose)
 ```
 omxplayer-sync -muv synctest.mp4
 ```
-Start on Slave (-u loop, -v verbose)
+Start on follwer (-u loop, -v verbose)
 ```
 omxplayer-sync -luv synctest.mp4
 ```
 
-Usage notes
------------
- * The filename on the master and the slave must be exactly the same.
- * More testfiles with timecodes can be found on [pocketvj.com][http://pocketvj.com/video/small_testfile.mp4].
- * Make sure there are no other files than movie files (e.g. no pictures, no textfiles) in the folder where the movie is, otherwise you may get sync errors.
- * A RJ45 cable must be connected before you start the master, otherwise it will not send sync data to slave.
- * Do not send audio output flags with omxplayer-sync on the slave e.g. /usr/bin/omxplayer-sync -lu -o both /media/internal/video/* 
- * Use videos which are min. 60 seconds or longer
- * If you dont know how to create a h264 mp4 file, visit http://www.online-convert.com.
+## Usage notes
 
+- The filename on the leader and the follwer must be exactly the same.
+- Make sure there are no other files than movie files (e.g. no pictures, no textfiles) in the folder where the movie is, otherwise you may get sync errors.
+- A RJ45 cable must be connected before you start the leader, otherwise it will not send sync data to follwer.
+- Do not send audio output flags with omxplayer-sync on the follwer e.g. /usr/bin/omxplayer-sync -lu -o both /media/internal/video/ *may not apply to vlc, not tested*
+- Use videos which are min. 60 seconds or longer
+- Encode video in HEVC (libx265 in ffmpeg)
 
-Example usage
---------------
+## Example usage
+
+> [!NOTE]
+> This is an example of OMXPlayer-Sync
+
 see this link: https://www.youtube.com/watch?v=Xp6GKFaw0io&feature=youtu.be
 by DSPeelJ
